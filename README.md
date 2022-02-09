@@ -2,7 +2,9 @@
 
 The aim of the project is to develop a proof of concept of a medical image classification algorithm. Algovera has been working with [nCight](https://www.ncight.com/) to create a small labelled dataset of about 100 images of knee and shoulder surgeries. This dataset has been uploaded to the Ocean [marketplace](https://market.oceanprotocol.com/). In this case, the surgical images contain personal data, and a private dataset is used so that data scientists cannot directly download or view the majority of images (except for a small number of sample images). Instead, data scientists will need to write algorithms that travel over the network to the location of the data itself (called compute-to-data, C2D). The outputs, such as statistical results and trained machine learning models, are then returned to the data scientist. For more information, check out our blog [post](https://docs.algovera.ai/blog/2022/01/24/Announcing%20Algovera%E2%80%99s%20Partnership%20with%20nCight%20to%20develop%20a%20medical%20image%20classification%20algorithm).
 
-<img src="images/arthroscopic.jpeg" width="40%">
+<p align="center">
+    <img src="images/arthroscopic.jpeg" width="40%">
+</p>
 
 # Contents
 
