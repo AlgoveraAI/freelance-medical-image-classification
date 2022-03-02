@@ -6,6 +6,7 @@ from sklearn.model_selection import StratifiedKFold
 from random import sample
 from timm import create_model
 import wandb
+import sys
 
 SEED=101
 random.seed(SEED)
@@ -67,7 +68,7 @@ def get_label(fn):
 
     elif fn.suffix == '.jpg':
         l_fn = f"{str(fn).split('.jpg')[0]}.json"
-    
+
     with open(l_fn, 'r') as tmp:
         l = json.load(tmp)
 
@@ -87,9 +88,9 @@ def get_train_test(df):
     return df
 
 
-def get_df(local=True):
+def get_df(local):
     print("Preparing df.")
-    filename = get_input(True)
+    filename = get_input(local)
     image_fns = get_image_files(filename)
 
     df = pd.DataFrame(list(image_fns), columns=['fns'])
@@ -106,13 +107,13 @@ def get_df(local=True):
 def setup_dataloaders(df, bs, size=512, augs=None):
     print("Setting up dls")
     if not augs:
-      augs = [Brightness(), 
-              Contrast(), 
-              Hue(), 
-              Saturation(), 
+      augs = [Brightness(),
+              Contrast(),
+              Hue(),
+              Saturation(),
               DeterministicDihedral(),
-              Hue(), 
-              Saturation(), 
+              Hue(),
+              Saturation(),
               RandomErasing(max_count=3)]
 
     db = DataBlock(blocks=(ImageBlock, CategoryBlock),
@@ -120,17 +121,17 @@ def setup_dataloaders(df, bs, size=512, augs=None):
                 get_y=ColReader('label'),
                 splitter=ColSplitter(),
                 item_tfms=Resize(size),
-                batch_tfms=setup_aug_tfms(augs) 
+                batch_tfms=setup_aug_tfms(augs)
                 )
     dls = db.dataloaders(df, bs=bs)
 
     return dls
 
 def get_timm_model(
-    arch:str, 
+    arch:str,
     transformer:bool=None,
-    pretrained=True, 
-    cut=None, 
+    pretrained=True,
+    cut=None,
     n_in=3
 ):
     "Creates a body from any model in the `timm` library."
@@ -147,12 +148,12 @@ def get_timm_model(
         apply_init(model[1], nn.init.kaiming_normal_)
 
         return model
-      
+
     else:
-        return create_model(arch, 
-                            pretrained=pretrained, 
+        return create_model(arch,
+                            pretrained=pretrained,
                             num_classes=2)
-        
+
 
 def get_learner_lr(dls,
     model, # Model arch
@@ -169,10 +170,10 @@ def get_learner_lr(dls,
                               pretrained=pretrained,
                               metrics=accuracy
                           )
-        
+
     else:
         model_config = TimmConfig[model]
-        model = get_timm_model(model_config['arch'], 
+        model = get_timm_model(model_config['arch'],
                                model_config['is_transformer'],
                                pretrained,
                                )
@@ -181,7 +182,7 @@ def get_learner_lr(dls,
             model,
             metrics=accuracy
         )
-        
+
     #v = learner.lr_find()
     #lr = v[0]
 
@@ -197,40 +198,41 @@ def setup_train(
     timm,
     pretrained
 ):
+
     df = get_df(local)
 
     try:
         size = TimmConfig[model]['size']
     except:
-        size=256  
+        size=256
 
     dls = setup_dataloaders(df, bs, size)
 
     learner = get_learner_lr(
-                      dls=dls, 
-                      model=model, 
+                      dls=dls,
+                      model=model,
                       timm=timm,
                       pretrained=pretrained)
-    
+
     model_name = model if isinstance(model, str) else model.__name__
     run_name = f'{model_name}_{freeze_epochs}_{epochs}'
     sbm = SaveModelCallback(fname=run_name)
 
-    wandb.init(project="algovera_ncight_kneeshoulder", 
+    wandb.init(project="algovera_ncight_kneeshoulder",
                name=run_name)
-    
+
     learner.freeze()
-    learner.fit_one_cycle(freeze_epochs, lr_max=lr, cbs=[GradientAccumulation(16), 
-                                                         GradientClip(), 
+    learner.fit_one_cycle(freeze_epochs, lr_max=lr, cbs=[GradientAccumulation(16),
+                                                         GradientClip(),
                                                          WandbCallback(log_preds=False),
                                                          sbm])
 
     learner.unfreeze()
-    learner.fit_one_cycle(epochs, lr_max=lr, cbs=[GradientAccumulation(16), 
-                                                  GradientClip(), 
-                                                  WandbCallback(log_preds=False), 
+    learner.fit_one_cycle(epochs, lr_max=lr, cbs=[GradientAccumulation(16),
+                                                  GradientClip(),
+                                                  WandbCallback(log_preds=False),
                                                   sbm])
-    
+
     preds, targs = learner.get_preds(dl=learner.dls.valid)
     preds = torch.argmax(preds, 1).numpy()
     targs = targs.numpy()
@@ -238,13 +240,13 @@ def setup_train(
         y_true=targs,
         preds=preds,
         class_names=list(learner.dls.vocab))
-        
+
     wandb.log({"conf_mat": cm})
 
     return learner
 
 
-def run(local=True):
+def run(local=False):
     config = {
         'local':local,
         'bs': 8,
@@ -265,7 +267,7 @@ def run(local=True):
                   timm=config['timm'],
                   pretrained=config['pretrained']
                   )
-    
+
     return learner
 
 if __name__ == "__main__":
