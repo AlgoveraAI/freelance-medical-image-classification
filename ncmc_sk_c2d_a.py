@@ -5,7 +5,7 @@ from fastai.callback.wandb import WandbCallback
 from sklearn.model_selection import StratifiedKFold
 from random import sample
 from timm import create_model
-import wandb
+#import wandb
 import sys
 import json
 
@@ -13,8 +13,8 @@ import json
 SEED=101
 random.seed(SEED)
 set_seed(SEED, True)
-wandbk = 'abc032abd4aceee91f5886a4615823dec09722bd253abc'
-wandb.login(key=wandbk[3:-3])
+#wandbk = 'abc032abd4aceee91f5886a4615823dec09722bd253abc'
+#wandb.login(key=wandbk[3:-3])
 
 
 #configs for timm-based models
@@ -123,13 +123,13 @@ def get_df(
 
     df = get_train_test(df)
 
-    print("logging df to wandb")
-    wdf = df.copy()
-    wdf['fns'] = wdf['fns'].map(str)
-    wta = wandb.Artifact('dataframe', type='dataset')
-    wt = wandb.Table(dataframe=wdf)
-    wta.add(wt, name='dataframe')
-    wandb.run.log_artifact(wta)
+#    print("logging df to wandb")
+#    wdf = df.copy()
+#    wdf['fns'] = wdf['fns'].map(str)
+#    wta = wandb.Artifact('dataframe', type='dataset')
+#    wt = wandb.Table(dataframe=wdf)
+#    wta.add(wt, name='dataframe')
+#    wandb.run.log_artifact(wta)
 
     return df
 
@@ -220,8 +220,8 @@ def get_learner_lr(
             metrics=accuracy
         )
 
-    #v = learner.lr_find()
-    #lr = v[0]
+#    v = learner.lr_find()
+#    lr = v[0]
 
     return learner
 
@@ -259,24 +259,25 @@ def setup_train(
     learner.freeze()
     learner.fit_one_cycle(freeze_epochs, lr_max=lr, cbs=[GradientAccumulation(16),
                                                          GradientClip(),
-                                                         WandbCallback(log_preds=False),
+                                                         #WandbCallback(log_preds=False),
                                                          sbm])
 
     learner.unfreeze()
     learner.fit_one_cycle(epochs, lr_max=lr, cbs=[GradientAccumulation(16),
                                                   GradientClip(),
-                                                  WandbCallback(log_preds=False),
+                                                  #WandbCallback(log_preds=False),
                                                   sbm])
 
     preds, targs = learner.get_preds(dl=learner.dls.valid)
     preds = torch.argmax(preds, 1).numpy()
     targs = targs.numpy()
-    cm = wandb.plot.confusion_matrix(
-        y_true=targs,
-        preds=preds,
-        class_names=list(learner.dls.vocab))
+    print(f"valid set accuracy: {sum(preds==targs)/len(targs)}")
+    # cm = wandb.plot.confusion_matrix(
+    #     y_true=targs,
+    #     preds=preds,
+    #     class_names=list(learner.dls.vocab))
 
-    wandb.log({"conf_mat": cm})
+    # wandb.log({"conf_mat": cm})
 
     return learner
 
@@ -305,9 +306,9 @@ def run(
     if not local:
       print(f"You are in C2D")
 
-    print("initiating wandb")
-    wandb.init(project="algovera_ncight_kneeshoulder",
-            name=run_name)
+#    print("initiating wandb")
+#    wandb.init(project="algovera_ncight_kneeshoulder",
+#            name=run_name)
 
     learner = setup_train(
                   local=config['local'],
