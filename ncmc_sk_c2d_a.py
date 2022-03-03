@@ -7,6 +7,8 @@ from random import sample
 from timm import create_model
 import wandb
 import sys
+import json
+
 
 SEED=101
 random.seed(SEED)
@@ -14,6 +16,8 @@ set_seed(SEED, True)
 wandbk = 'abc032abd4aceee91f5886a4615823dec09722bd253abc'
 wandb.login(key=wandbk[3:-3])
 
+
+#configs for timm-based models
 TimmConfig= {
     #non-transformer
     'efficientnet_b0':{'arch': 'efficientnet_b0', 'is_transformer':False},
@@ -34,7 +38,9 @@ TimmConfig= {
 }
 
 
-def get_input(local=False):
+def get_input(
+    local:bool=False, # Flag to indicate local vs C2D
+):
     if local:
         print("Reading local medicaldata directory.")
 
@@ -55,11 +61,17 @@ def get_input(local=False):
     print('cwd', cwd)
 
     did = dids[0]
-    filename = Path(f'/data/inputs/{did}/0')  # 0 for metadata service
+    print(f"DID: {did}")
+
+    filename = Path(f'/data/inputs/{did}')
+    print(f"filename: {filename}")
+    print(f"Contents of the directories {filename.ls()}")
     return filename
 
 
-def get_label(fn):
+def get_label(
+    fn, # Image file name
+):
     if fn.suffix == '.jpeg':
         l_fn = f"{str(fn).split('.jpeg')[0]}.json"
 
@@ -75,24 +87,34 @@ def get_label(fn):
     return l['Scope_type']
 
 
-def get_patient(fn):
+def get_patient(
+    fn, # Image file name
+):
     return ' '.join(str(fn).split('/')[-5:-2])
 
 
-def get_train_test(df):
+def get_train_test(
+    df:pd.DataFrame, # Dataframe built by `get_df`
+):
     ids = list(df['patient_id'].unique())
     train_ids = random.sample(ids, int(len(ids)*0.8))
     test_ids = [id_ for id_ in ids if id_ not in train_ids]
+
+    print(f"Number of training samples: {len(train_ids)}")
+    print(f"Number of valid samples: {len(test_ids)}")
+
     df.loc[df[df['patient_id'].isin(test_ids)].index, 'is_valid'] = True
 
     return df
 
 
-def get_df(local):
+def get_df(
+    local:bool, # Flag to indicate local vs C2D
+):
     print("Preparing df.")
     filename = get_input(local)
     image_fns = get_image_files(filename)
-
+    print(f"Printing samples of image filenames: {image_fns[:3]}")
     df = pd.DataFrame(list(image_fns), columns=['fns'])
 
     df['label'] = df['fns'].apply(lambda x: get_label(x))
@@ -101,20 +123,33 @@ def get_df(local):
 
     df = get_train_test(df)
 
+    print("logging df to wandb")
+    wdf = df.copy()
+    wdf['fns'] = wdf['fns'].map(str)
+    wta = wandb.Artifact('dataframe', type='dataset')
+    wt = wandb.Table(dataframe=wdf)
+    wta.add(wt, name='dataframe')
+    wandb.run.log_artifact(wta)
+
     return df
 
 
-def setup_dataloaders(df, bs, size=512, augs=None):
+def setup_dataloaders(
+    df:pd.DataFrame, # Dataframe built by `get_df`
+    bs:int, # Batch_size
+    size:int=512, # Resize size
+    augs:list=None, # List of fastai augmentations
+):
     print("Setting up dls")
     if not augs:
-      augs = [Brightness(),
-              Contrast(),
-              Hue(),
-              Saturation(),
-              DeterministicDihedral(),
-              Hue(),
-              Saturation(),
-              RandomErasing(max_count=3)]
+        augs = [Brightness(),
+                Contrast(),
+                Hue(),
+                Saturation(),
+                DeterministicDihedral(),
+                Hue(),
+                Saturation(),
+                RandomErasing(max_count=3)]
 
     db = DataBlock(blocks=(ImageBlock, CategoryBlock),
                 get_x=ColReader('fns'),
@@ -127,12 +162,13 @@ def setup_dataloaders(df, bs, size=512, augs=None):
 
     return dls
 
+
 def get_timm_model(
-    arch:str,
-    transformer:bool=None,
-    pretrained=True,
+    arch:str, # Architecture of the model to use
+    transformer:bool=None, # Flag to indicate if its a transformer-based model
+    pretrained:bool=True, # Flag to use pretrained backbone
     cut=None,
-    n_in=3
+    n_in:int=3, # Number of input channels, RGB is 3
 ):
     "Creates a body from any model in the `timm` library."
     if not transformer:
@@ -155,11 +191,12 @@ def get_timm_model(
                             num_classes=2)
 
 
-def get_learner_lr(dls,
-    model, # Model arch
+def get_learner_lr(
+    dls,
+    model, # Model arch to use
     timm:bool=False, # True if using timm model
     pretrained:bool=True, # Use pretrained backbone
-    ):
+):
 
     print("Setting up learner.")
 
@@ -189,14 +226,15 @@ def get_learner_lr(dls,
     return learner
 
 def setup_train(
-    local,
-    bs,
-    epochs,
-    freeze_epochs,
-    lr,
-    model,
-    timm,
-    pretrained
+    local:bool, # Flag to indicate local vs C2D
+    bs:int, # Batch_size to use
+    epochs:int, # Number of epochs to trian after unfreeze
+    freeze_epochs:int, # Number of epochs to trian before unfreeze
+    lr:float, # Learning rate
+    model, # Model to use
+    timm:bool, # True if using timm-based model
+    pretrained:bool, # Use pretrianed backbone
+    run_name:str, # Name of the current experiment
 ):
 
     df = get_df(local)
@@ -214,12 +252,9 @@ def setup_train(
                       timm=timm,
                       pretrained=pretrained)
 
-    model_name = model if isinstance(model, str) else model.__name__
-    run_name = f'{model_name}_{freeze_epochs}_{epochs}'
     sbm = SaveModelCallback(fname=run_name)
 
-    wandb.init(project="algovera_ncight_kneeshoulder",
-               name=run_name)
+
 
     learner.freeze()
     learner.fit_one_cycle(freeze_epochs, lr_max=lr, cbs=[GradientAccumulation(16),
@@ -246,17 +281,34 @@ def setup_train(
     return learner
 
 
-def run(local=False):
+def run(
+    local:bool=False
+):
     config = {
-        'local':local,
+        'local':local, # Flag to indicate local vs C2D
         'bs': 8,
         'epochs':25,
         'freeze_epochs':2,
         'lr':1e-3,
         'model':resnet34, #if fastai pass fastai callable function; if timm pass arch name
         'timm':False,
-        'pretrained':True
+        'pretrained':True,
     }
+
+    model_name = config['model'] if isinstance(config['model'], str) else config['model'].__name__
+    run_name = f"{model_name}_{config['freeze_epochs']}_{config['epochs']}"
+
+    config['run_name'] = run_name
+
+    if local:
+      print(f"You are in local env")
+    if not local:
+      print(f"You are in C2D")
+
+    print("initiating wandb")
+    wandb.init(project="algovera_ncight_kneeshoulder",
+            name=run_name)
+
     learner = setup_train(
                   local=config['local'],
                   bs=config['bs'],
@@ -265,11 +317,14 @@ def run(local=False):
                   lr=config['lr'],
                   model=config['model'],
                   timm=config['timm'],
-                  pretrained=config['pretrained']
+                  pretrained=config['pretrained'],
+                  run_name=config['run_name']
                   )
 
     return learner
 
 if __name__ == "__main__":
+    print(f"Is cuda available: {torch.cuda.is_available()}")
+
     local = (len(sys.argv) == 2 and sys.argv[1] == "local")
     run(local)
