@@ -113,7 +113,18 @@ def get_df(
 ):
     print("Preparing df.")
     filename = get_input(local)
-    image_fns = get_image_files(filename)
+    # image_fns = get_image_files(filename)
+
+    image_fns = []
+    for root, dirs, files in os.walk(str(filename)):
+        path = root.split(os.sep)
+        print((len(path) - 1) * '---', os.path.basename(root))
+        for file in files:
+            fn = os.path.join(root,file)
+            if fn.split('.')[-1] in ['jpeg', 'jpg', 'png']:
+                image_fns.append(Path(fn))
+            print(len(path) * '---', file)
+
     print(f"Printing samples of image filenames: {image_fns[:3]}")
     df = pd.DataFrame(list(image_fns), columns=['fns'])
 
@@ -253,8 +264,6 @@ def setup_train(
                       pretrained=pretrained)
 
     sbm = SaveModelCallback(fname=run_name)
-
-
 
     learner.freeze()
     learner.fit_one_cycle(freeze_epochs, lr_max=lr, cbs=[GradientAccumulation(16),
