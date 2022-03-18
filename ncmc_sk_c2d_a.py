@@ -269,11 +269,11 @@ def setup_train(
                       timm=timm,
                       pretrained=pretrained)
 
-    if not local:
-        fname = f"outputs/{run_name}"
-
-        if not Path("outputs/models").exists():
-            Path("outputs/models").mkdir()
+    # if not local:
+    #     fname = f"outputs/{run_name}"
+    #
+    #     if not Path("outputs/models").exists():
+    #         Path("outputs/models").mkdir()
 
     sbm = SaveModelCallback(fname=run_name)
 
@@ -299,6 +299,14 @@ def setup_train(
     #     class_names=list(learner.dls.vocab))
 
     # wandb.log({"conf_mat": cm})
+    for root, dirs, files in os.walk('.'):
+            path = root.split(os.sep)
+            print((len(path) - 1) * '---', os.path.basename(root))
+            for file in files:
+                fn = os.path.join(root,file)
+                if fn.split('.')[-1] in ['jpeg', 'jpg', 'png']:
+                    fns.append(fn)
+                print(len(path) * '---', file)
 
     return learner
 
