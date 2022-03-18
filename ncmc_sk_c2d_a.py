@@ -326,7 +326,6 @@ def run(
     if not local:
       print(f"You are in C2D")
 
-#    print("initiating wandb")
 #    wandb.init(project="algovera_ncight_kneeshoulder",
 #            name=run_name)
 
