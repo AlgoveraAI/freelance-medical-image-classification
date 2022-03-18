@@ -71,25 +71,25 @@ def get_input(
 def get_label(
     fn, # Image file name
 ):
-    if fn.suffix == '.jpeg':
-        l_fn = f"{str(fn).split('.jpeg')[0]}.json"
+    # if fn.suffix == '.jpeg':
+    #     l_fn = f"{str(fn).split('.jpeg')[0]}.json"
+    #
+    # elif fn.suffix == '.png':
+    #     l_fn = f"{str(fn).split('.png')[0]}.json"
+    #
+    # elif fn.suffix == '.jpg':
+    #     l_fn = f"{str(fn).split('.jpg')[0]}.json"
+    #
+    # with open(l_fn, 'r') as tmp:
+    #     l = json.load(tmp)
 
-    elif fn.suffix == '.png':
-        l_fn = f"{str(fn).split('.png')[0]}.json"
-
-    elif fn.suffix == '.jpg':
-        l_fn = f"{str(fn).split('.jpg')[0]}.json"
-
-    with open(l_fn, 'r') as tmp:
-        l = json.load(tmp)
-
-    return l['Scope_type']
+    return str(fn).split('/')[-4]
 
 
 def get_patient(
     fn, # Image file name
 ):
-    return ' '.join(str(fn).split('/')[-5:-2])
+    return ' '.join(str(fn).split('/')[-3])
 
 
 def get_train_test(
@@ -147,7 +147,7 @@ def get_df(
 #    wt = wandb.Table(dataframe=wdf)
 #    wta.add(wt, name='dataframe')
 #    wandb.run.log_artifact(wta)
-
+    print(df.head(30))
     return df
 
 
