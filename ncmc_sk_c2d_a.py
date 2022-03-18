@@ -271,7 +271,7 @@ def setup_train(
 
     if not local:
         fname = f"outputs/{run_name}"
-        if not Path("outputs/models").is_exists():
+        if not "outputs/models".is_exists():
             Path("outputs/models").mkdir()
 
     sbm = SaveModelCallback(fname=run_name)
