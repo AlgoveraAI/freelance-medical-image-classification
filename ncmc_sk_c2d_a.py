@@ -284,13 +284,15 @@ def setup_train(
     learner.fit_one_cycle(freeze_epochs, lr_max=lr, cbs=[GradientAccumulation(16),
                                                          GradientClip(),
                                                          #WandbCallback(log_preds=False),
-                                                         sbm])
+                                                         sbm,
+                                                         TimeCallback()])
 
     learner.unfreeze()
     learner.fit_one_cycle(epochs, lr_max=lr, cbs=[GradientAccumulation(16),
                                                   GradientClip(),
                                                   #WandbCallback(log_preds=False),
-                                                  sbm])
+                                                  sbm,
+                                                  TimeCallback()])
 
     preds, targs = learner.get_preds(dl=learner.dls.valid)
     preds = torch.argmax(preds, 1).numpy()
@@ -354,6 +356,12 @@ def run(
                   )
 
     return learner
+
+
+class TimeCallback(Callback):
+    def after_step(self):
+        print(f"time since start {time.time() - start:.2f}s")
+
 
 if __name__ == "__main__":
     print(f"Is cuda available: {torch.cuda.is_available()}")
