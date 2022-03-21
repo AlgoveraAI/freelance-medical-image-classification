@@ -359,6 +359,14 @@ def run(
 
 
 class TimeCallback(Callback):
+    def before_train(self):
+        print(f"time since start {time.time() - start:.2f}s")
+    def before_epoch(self):
+        print(f"time since start {time.time() - start:.2f}s")
+    def before_batch(self):
+        print(f"time since start {time.time() - start:.2f}s")
+    def before_step(self):
+        print(f"time since start {time.time() - start:.2f}s")
     def after_step(self):
         print(f"time since start {time.time() - start:.2f}s")
 
