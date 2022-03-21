@@ -8,6 +8,7 @@ from timm import create_model
 #import wandb
 import sys
 import json
+import time
 
 
 SEED=101
@@ -15,7 +16,7 @@ random.seed(SEED)
 set_seed(SEED, True)
 #wandbk = 'abc032abd4aceee91f5886a4615823dec09722bd253abc'
 #wandb.login(key=wandbk[3:-3])
-
+start = time.time()
 
 #configs for timm-based models
 TimmConfig= {
@@ -65,6 +66,7 @@ def get_input(
 
     filename = Path(f'/data/inputs/{did}/0')
     print(f"filename: {filename}")
+    print(f"time since start {(time.time() - start):.2f}s")
     return filename
 
 
@@ -148,6 +150,7 @@ def get_df(
 #    wta.add(wt, name='dataframe')
 #    wandb.run.log_artifact(wta)
     print(df.head(30))
+    print(f"time since start {(time.time() - start):.2f}s")
     return df
 
 
@@ -274,7 +277,7 @@ def setup_train(
     #
     #     if not Path("outputs/models").exists():
     #         Path("outputs/models").mkdir()
-
+    print(f"time since start {(time.time() - start):.2f}s")
     sbm = SaveModelCallback(fname=run_name)
 
     learner.freeze()
