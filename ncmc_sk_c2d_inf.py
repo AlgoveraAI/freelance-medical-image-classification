@@ -2,6 +2,7 @@ import os
 from fastai.vision.all import *
 
 #prepare model path
+print("getting model files")
 model0 = "wget https://www.dropbox.com/s/3sod2uk49a4hror/resnet34_0.pkl?dl=1"
 model1 = "wget https://www.dropbox.com/s/dxoucxlnn62hif5/resnet34_1.pkl?dl=1"
 model2 = "wget https://www.dropbox.com/s/cbfioaw5mj0fg2w/resnet34_2.pkl?dl=1"
@@ -13,16 +14,19 @@ os.system(model2)
 model_paths = ['resnet34_0.pkl?dl=1', 'resnet34_1.pkl?dl=1', 'resnet34_0.pkl?dl=1']
 
 #prepare data path
+print("getting data files")
 dids = os.getenv('DIDS', None)
 dids = json.loads(dids)
 did = dids[0]
 data_path = Path(f'/data/inputs/{did}/0')
 
 #unzip data
+print("unzipping data")
 with zipfile.ZipFile(data_path, 'r') as zip_ref:
     zip_ref.extractall(str('.'))
 
 #prepare df
+print("preparing df")
 def get_label(
     fn, # Image file name
 ):
@@ -33,6 +37,7 @@ df = pd.DataFrame(list(fns), columns=['fns'])
 df['label'] = df.fns.apply(lambda x: get_label(x))
 
 #load model n make preds
+print("making preds")
 preds = []
 for path in model_paths:
     learn = load_learner(path)
@@ -43,6 +48,7 @@ for path in model_paths:
 final_pred = np.stack(preds).mean(0)
 
 #prepare output
+print("preparing outputs")
 df = pd.concat([df, pd.DataFrame(final_pred, columns=['knee-score', 'shoulder-score'])], 1)
 df['prediction'] = df['knee-score'] > df['shoulder-score']
 df['prediction'] = df['prediction'].apply(lambda x: "Knee" if x is True else "Shoulder")
@@ -57,6 +63,5 @@ for i, row in df.iterrows():
     axes.flatten()[i].axis("off")
     axes.flatten()[i].set_title(f"{row.label} | {row.prediction}")
     plt.tight_layout()
-
 
 fig.savefig("data/outputs/preds.jpeg")
