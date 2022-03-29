@@ -4,14 +4,14 @@ from fastai.vision.all import *
 #prepare model path
 print("getting model files")
 model0 = "wget https://www.dropbox.com/s/3sod2uk49a4hror/resnet34_0.pkl?dl=1"
-model1 = "wget https://www.dropbox.com/s/dxoucxlnn62hif5/resnet34_1.pkl?dl=1"
-model2 = "wget https://www.dropbox.com/s/cbfioaw5mj0fg2w/resnet34_2.pkl?dl=1"
+#model1 = "wget https://www.dropbox.com/s/dxoucxlnn62hif5/resnet34_1.pkl?dl=1"
+#model2 = "wget https://www.dropbox.com/s/cbfioaw5mj0fg2w/resnet34_2.pkl?dl=1"
 
 os.system(model0)
-os.system(model1)
-os.system(model2)
+#os.system(model1)
+#os.system(model2)
 
-model_paths = ['resnet34_0.pkl?dl=1', 'resnet34_1.pkl?dl=1', 'resnet34_0.pkl?dl=1']
+model_paths = ['resnet34_0.pkl?dl=1'] #, 'resnet34_1.pkl?dl=1', 'resnet34_0.pkl?dl=1']
 
 #prepare data path
 print("getting data files")
@@ -46,7 +46,7 @@ for path in model_paths:
 
 # average over the three models
 final_pred = np.stack(preds).mean(0)
-
+print(final_pred)
 #prepare output
 print("preparing outputs")
 df = pd.concat([df, pd.DataFrame(final_pred, columns=['knee-score', 'shoulder-score'])], 1)
