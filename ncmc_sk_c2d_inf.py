@@ -53,7 +53,7 @@ df = pd.concat([df, pd.DataFrame(final_pred, columns=['knee-score', 'shoulder-sc
 df['prediction'] = df['knee-score'] > df['shoulder-score']
 df['prediction'] = df['prediction'].apply(lambda x: "Knee" if x is True else "Shoulder")
 
-df.to_csv("data/outputs/final_df.csv")
+df.to_csv("data/outputs/final_df.csv", index=False)
 print(df)
 
 #results figure
@@ -61,7 +61,7 @@ fig, axes = plt.subplots(10, 2, figsize=(15,30))
 for i, row in df.iterrows():
     axes.flatten()[i].imshow(PILImage.create(row.fns))
     axes.flatten()[i].axis("off")
-    axes.flatten()[i].set_title(f"{row.label} | {row.prediction}")
+    axes.flatten()[i].set_title(f"Actual: {row.label} | Prediction: {row.prediction} \n Knee-score: {row['knee-score']:.4f} Shoulder-score: {row['shoulder-score']:.4f}")
     plt.tight_layout()
 
 fig.savefig("data/outputs/preds.jpeg")
